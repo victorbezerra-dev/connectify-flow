@@ -54,6 +54,9 @@ android {
         warningsAsErrors = true
         checkReleaseBuilds = true
         baseline = file("lint-baseline.xml")
+        disable += "AndroidGradlePluginVersion"
+        disable += "GradleDependency"
+        disable += "NewerVersionAvailable"
     }
 
     compileOptions {
