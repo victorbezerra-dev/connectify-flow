@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.ksp)
 }
 
 ktlint {
@@ -78,6 +79,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.material)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.okhttp)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
