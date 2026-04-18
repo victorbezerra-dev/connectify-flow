@@ -9,6 +9,11 @@ ktlint {
     version.set("1.0.1")
 }
 
+detekt {
+    config.setFrom(files("$rootDir/detekt.yml"))
+    buildUponDefaultConfig = true
+}
+
 android {
     namespace = "io.github.victorbezerradev.connectifyflow"
     compileSdk = 34
