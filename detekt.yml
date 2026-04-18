@@ -30,3 +30,8 @@ style:
   active: true
   MagicNumber:
     active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
