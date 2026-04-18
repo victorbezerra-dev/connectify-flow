@@ -1,4 +1,4 @@
-package io.github.victorbezerra_dev.connectify_flow.app.navigation
+package io.github.victorbezerradev.connectifyflow.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController

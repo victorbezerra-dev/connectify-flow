@@ -13,7 +13,7 @@
         android:theme="@style/Theme.ConnectifyFlow"
         tools:targetApi="31">
         <activity
-            android:name="io.github.victorbezerra_dev.connectify_flow.app.MainActivity"
+            android:name="io.github.victorbezerradev.connectifyflow.app.MainActivity"
             android:exported="true">
 
             <intent-filter>

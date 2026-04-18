@@ -10,11 +10,11 @@ ktlint {
 }
 
 android {
-    namespace = "com.example.connectifyflow"
+    namespace = "io.github.victorbezerradev.connectifyflow"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.connectifyflow"
+        applicationId = "io.github.victorbezerradev.connectifyflow"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

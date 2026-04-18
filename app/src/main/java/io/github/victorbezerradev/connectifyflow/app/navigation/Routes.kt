@@ -1,4 +1,4 @@
-package io.github.victorbezerra_dev.connectify_flow.app.navigation
+package io.github.victorbezerradev.connectifyflow.app.navigation
 
 sealed class Routes(val route: String) {
 
