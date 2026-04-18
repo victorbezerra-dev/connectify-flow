@@ -1,18 +1,23 @@
 #!/bin/sh
+set -e
 
-echo "Running ktlint..."
-./gradlew ktlintCheck
-if [ $? -ne 0 ]; then
-  echo "ktlint failed"
-  exit 1
+echo "Checking changed Kotlin files..."
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.kt' '*.kts')
+
+if [ -z "$FILES" ]; then
+  echo "No Kotlin files to check"
+  exit 0
 fi
+
+echo "Changed files:"
+echo "$FILES"
+
+echo "Running ktlint (format)..."
+./gradlew ktlintFormat
 
 echo "Running detekt..."
 ./gradlew detekt
-if [ $? -ne 0 ]; then
-  echo "detekt failed"
-  exit 1
-fi
 
 echo "All checks passed"
 exit 0
