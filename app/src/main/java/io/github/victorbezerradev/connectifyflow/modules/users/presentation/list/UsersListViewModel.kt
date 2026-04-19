@@ -7,10 +7,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.coordinators.UsersConnectionCoordinator
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.repositories.UsersRepository
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.actions.UsersUiAction
+import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.effects.UsersUiEffect
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.UsersUiState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -28,6 +32,9 @@ class UsersListViewModel
         private val _uiState = MutableStateFlow(UsersUiState())
         val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
 
+        private val _uiEffect = MutableSharedFlow<UsersUiEffect>()
+        val uiEffect: SharedFlow<UsersUiEffect> = _uiEffect.asSharedFlow()
+
         private var observeCoordinatorJob: Job? = null
 
         init {
@@ -40,6 +47,42 @@ class UsersListViewModel
                 UsersUiAction.ScreenStarted -> {
                     coordinator.start()
                     loadUsers()
+                }
+
+                is UsersUiAction.OpenProfileClicked -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.NavigateToProfile(action.user))
+                    }
+                }
+
+                is UsersUiAction.OpenWebPageClicked -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.OpenWebPage(action.url))
+                    }
+                }
+
+                UsersUiAction.BackClicked -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.NavigateBack)
+                    }
+                }
+
+                is UsersUiAction.EmailClicked -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.SendEmail(action.email))
+                    }
+                }
+
+                is UsersUiAction.CallClicked -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.CallPhone(action.phone))
+                    }
+                }
+
+                is UsersUiAction.ShowError -> {
+                    viewModelScope.launch {
+                        _uiEffect.emit(UsersUiEffect.ShowSnackbar(action.message))
+                    }
                 }
             }
         }

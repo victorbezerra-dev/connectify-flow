@@ -48,6 +48,7 @@ fun UsersListScreen(viewModel: UsersListViewModel = hiltViewModel()) {
     UsersListContent(
         uiState = uiState,
         onRetry = viewModel::loadUsers,
+        onAction = viewModel::onAction,
     )
 }
 
@@ -55,6 +56,7 @@ fun UsersListScreen(viewModel: UsersListViewModel = hiltViewModel()) {
 fun UsersListContent(
     uiState: UsersUiState,
     onRetry: () -> Unit,
+    onAction: (UsersUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val statusBarPadding =
@@ -97,6 +99,7 @@ fun UsersListContent(
                 UsersListLoadedContent(
                     paddingValues = paddingValues,
                     users = uiState.users,
+                    onAction = onAction,
                 )
             }
         }
@@ -156,6 +159,7 @@ fun ErrorContent(
 fun UsersListLoadedContent(
     paddingValues: PaddingValues,
     users: List<User>,
+    onAction: (UsersUiAction) -> Unit,
 ) {
     LazyColumn(
         modifier =
@@ -179,7 +183,11 @@ fun UsersListLoadedContent(
             items = users,
             key = { user -> user.id },
         ) { user ->
-            UserCard(user = user)
+            UserCard(
+                user = user,
+                onProfileClick = { onAction(UsersUiAction.OpenProfileClicked(user)) },
+                onWebPageClick = { url -> onAction(UsersUiAction.OpenWebPageClicked(url)) },
+            )
         }
 
         item {
@@ -223,6 +231,7 @@ fun UsersListContentPreviewConnected() {
                     errorMessage = null,
                 ),
             onRetry = {},
+            onAction = {},
         )
     }
 }
@@ -242,6 +251,7 @@ fun UsersListContentPreviewLoading() {
                     errorMessage = null,
                 ),
             onRetry = {},
+            onAction = {},
         )
     }
 }
@@ -261,6 +271,7 @@ fun UsersListContentPreviewError() {
                     errorMessage = "Connection error while loading users.",
                 ),
             onRetry = {},
+            onAction = {},
         )
     }
 }

@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +45,8 @@ import io.github.victorbezerradev.connectifyflow.modules.users.domain.models.Use
 @Composable
 fun UserCard(
     user: User,
+    onProfileClick: () -> Unit,
+    onWebPageClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var isImageModalVisible by remember { mutableStateOf(false) }
@@ -83,7 +84,11 @@ fun UserCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                UserActionsRow(user = user)
+                UserActionsRow(
+                    user = user,
+                    onProfileClick = onProfileClick,
+                    onWebPageClick = onWebPageClick,
+                )
             }
         }
     }
@@ -177,9 +182,12 @@ private fun UserPhone(phone: String) {
 }
 
 @Composable
-private fun UserActionsRow(user: User) {
-    val uriHandler = LocalUriHandler.current
-    val url = user.profileLinkUrl ?: return
+private fun UserActionsRow(
+    user: User,
+    onProfileClick: () -> Unit,
+    onWebPageClick: (String) -> Unit,
+) {
+    val url = user.profileLinkUrl
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -189,15 +197,17 @@ private fun UserActionsRow(user: User) {
             label = "Profile",
             icon = Icons.Outlined.AccountCircle,
             color = MaterialTheme.colorScheme.primary,
-            onClick = { uriHandler.openUri(url) },
+            onClick = onProfileClick,
         )
 
-        UserActionChip(
-            label = "Web Page",
-            icon = Icons.Outlined.Language,
-            color = MaterialTheme.colorScheme.secondary,
-            onClick = { uriHandler.openUri(url) },
-        )
+        url?.let {
+            UserActionChip(
+                label = "Web Page",
+                icon = Icons.Outlined.Language,
+                color = MaterialTheme.colorScheme.secondary,
+                onClick = { onWebPageClick(it) },
+            )
+        }
     }
 }
 
