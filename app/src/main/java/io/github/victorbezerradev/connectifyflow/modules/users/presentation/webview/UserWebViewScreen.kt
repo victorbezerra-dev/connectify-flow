@@ -1,3 +1,5 @@
+package io.github.victorbezerradev.connectifyflow.modules.users.presentation.webview
+
 import android.util.Log
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler

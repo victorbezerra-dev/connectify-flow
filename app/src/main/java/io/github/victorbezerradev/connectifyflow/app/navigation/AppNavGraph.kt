@@ -1,6 +1,5 @@
 package io.github.victorbezerradev.connectifyflow.app.navigation
 
-import UserWebViewScreen
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -22,6 +21,7 @@ import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.actions.UsersUiAction
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.effects.UsersUiEffect
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.profile.UserProfileScreen
+import io.github.victorbezerradev.connectifyflow.modules.users.presentation.webview.UserWebViewScreen
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
