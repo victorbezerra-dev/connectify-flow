@@ -2,21 +2,15 @@ package io.github.victorbezerradev.connectifyflow.modules.users.presentation.lis
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -27,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -197,7 +190,9 @@ private fun ExpandableConnectionContent(
                     .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            GrowingCircle(
+            ConnectionStatusAnimation(
+                connectionState = status,
+                communicationStatus = communicationStatus,
                 modifier = Modifier.padding(bottom = 20.dp),
             )
 
@@ -216,34 +211,3 @@ private fun rememberArrowRotation(expanded: Boolean): State<Float> =
         targetValue = if (expanded) 180f else 0f,
         label = "arrowRotation",
     )
-
-@Composable
-private fun GrowingCircle(modifier: Modifier = Modifier) {
-    var targetSize by remember { mutableStateOf(0.dp) }
-    val size by animateDpAsState(
-        targetValue = targetSize,
-        animationSpec =
-            tween(
-                durationMillis = 1000,
-                easing = FastOutSlowInEasing,
-            ),
-        label = "size",
-    )
-
-    LaunchedEffect(Unit) {
-        targetSize = 120.dp
-    }
-
-    Box(
-        modifier =
-            modifier
-                .size(size)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                    shape = CircleShape,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        // Add Rive animation
-    }
-}
