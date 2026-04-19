@@ -2,6 +2,7 @@ package io.github.victorbezerradev.connectifyflow.modules.users.presentation.lis
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +48,8 @@ fun UserCard(
     user: User,
     modifier: Modifier = Modifier,
 ) {
+    var isImageModalVisible by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -60,7 +67,10 @@ fun UserCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            UserAvatar(user = user)
+            UserAvatar(
+                user = user,
+                onImageClick = { isImageModalVisible = true },
+            )
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -77,17 +87,29 @@ fun UserCard(
             }
         }
     }
+
+    if (isImageModalVisible) {
+        FullScreenImageModal(
+            imageUrl = user.profileImageUrl,
+            userName = user.name,
+            onDismiss = { isImageModalVisible = false },
+        )
+    }
 }
 
 @Composable
-private fun UserAvatar(user: User) {
+private fun UserAvatar(
+    user: User,
+    onImageClick: () -> Unit,
+) {
     SubcomposeAsyncImage(
         model = user.profileImageUrl,
         contentDescription = "Photo of ${user.name}",
         modifier =
             Modifier
                 .size(64.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .clickable { onImageClick() },
         contentScale = ContentScale.Crop,
         loading = {
             UserPlaceholder(name = user.name)
