@@ -6,11 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -19,15 +20,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.victorbezerradev.connectifyflow.core.websocket.ConnectionState
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.models.User
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.actions.UsersUiAction
@@ -35,14 +36,19 @@ import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.components.UserCard
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.UsersUiState
-import kotlin.collections.emptyList
 
 @Composable
 fun UsersListScreen(viewModel: UsersListViewModel = hiltViewModel()) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
     LaunchedEffect(Unit) {
         viewModel.onAction(UsersUiAction.ScreenStarted)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.onAction(UsersUiAction.ScreenPaused)
+        }
     }
 
     UsersListContent(
@@ -59,22 +65,14 @@ fun UsersListContent(
     onAction: (UsersUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusBarPadding =
-        WindowInsets.statusBars
-            .asPaddingValues()
-            .calculateTopPadding()
-
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             ExpandableConnectionCard(
                 modifier =
-                    Modifier.padding(
-                        top = statusBarPadding + 16.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp,
-                    ),
+                    Modifier
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                 title = "Monitor",
                 status = uiState.connectionState,
                 communicationStatus = uiState.communicationStatus,
@@ -93,6 +91,10 @@ fun UsersListContent(
                     errorMessage = uiState.errorMessage,
                     onRetry = onRetry,
                 )
+            }
+
+            uiState.users.isEmpty() -> {
+                EmptyContent(paddingValues = paddingValues)
             }
 
             else -> {
@@ -156,6 +158,34 @@ fun ErrorContent(
 }
 
 @Composable
+fun EmptyContent(paddingValues: PaddingValues) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "No users found",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Text(
+                text = "There are no users to display right now.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+@Composable
 fun UsersListLoadedContent(
     paddingValues: PaddingValues,
     users: List<User>,
@@ -165,13 +195,12 @@ fun UsersListLoadedContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .windowInsetsPadding(WindowInsets.navigationBars),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Users List",
                 style = MaterialTheme.typography.titleLarge,
@@ -185,13 +214,17 @@ fun UsersListLoadedContent(
         ) { user ->
             UserCard(
                 user = user,
-                onProfileClick = { onAction(UsersUiAction.OpenProfileClicked(user)) },
-                onWebPageClick = { url -> onAction(UsersUiAction.OpenWebPageClicked(url)) },
+                onProfileClick = {
+                    onAction(UsersUiAction.OpenProfileClicked(user))
+                },
+                onWebPageClick = { url ->
+                    onAction(UsersUiAction.OpenWebPageClicked(url))
+                },
             )
         }
 
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -269,6 +302,26 @@ fun UsersListContentPreviewError() {
                     isLoading = false,
                     users = emptyList(),
                     errorMessage = "Connection error while loading users.",
+                ),
+            onRetry = {},
+            onAction = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun UsersListContentPreviewEmpty() {
+    MaterialTheme {
+        UsersListContent(
+            uiState =
+                UsersUiState(
+                    connectionState = ConnectionState.Connected,
+                    communicationStatus = CommunicationStatusState.Idle,
+                    heartbeatCountdown = 30,
+                    isLoading = false,
+                    users = emptyList(),
+                    errorMessage = null,
                 ),
             onRetry = {},
             onAction = {},

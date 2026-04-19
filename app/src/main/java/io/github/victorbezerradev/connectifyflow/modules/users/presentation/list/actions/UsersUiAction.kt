@@ -5,6 +5,8 @@ import io.github.victorbezerradev.connectifyflow.modules.users.domain.models.Use
 sealed interface UsersUiAction {
     data object ScreenStarted : UsersUiAction
 
+    data object ScreenPaused : UsersUiAction
+
     data class OpenProfileClicked(val user: User) : UsersUiAction
 
     data class OpenWebPageClicked(val url: String) : UsersUiAction

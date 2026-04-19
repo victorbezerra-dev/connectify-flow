@@ -15,10 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
-@Singleton
 class HeartbeatCoordinator
     @Inject
     constructor(
@@ -47,10 +45,12 @@ class HeartbeatCoordinator
                     Log.d(TAG, "Heartbeat started")
 
                     while (isActive) {
+                        // Start communication cycle in a separate job so it doesn't block the countdown
                         if (webSocketClient.connectionState.value is ConnectionState.Connected) {
-                            runCycle()
+                            launch { runCycle() }
                         }
 
+                        // Countdown starts immediately
                         for (i in 30 downTo 1) {
                             countdownState.value = i
                             delay(1000)
@@ -62,6 +62,9 @@ class HeartbeatCoordinator
         fun stop() {
             job?.cancel()
             job = null
+
+            messagesJob?.cancel()
+            messagesJob = null
 
             pendingResponse?.cancel()
             pendingResponse = null

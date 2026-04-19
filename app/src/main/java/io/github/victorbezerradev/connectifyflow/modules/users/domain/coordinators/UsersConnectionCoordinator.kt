@@ -13,11 +13,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 class UsersConnectionCoordinator
     @Inject
     constructor(
@@ -30,106 +29,165 @@ class UsersConnectionCoordinator
         val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
 
         private var connectionJob: Job? = null
+        private var communicationStatusJob: Job? = null
+        private var countdownJob: Job? = null
+        private var reconnectJob: Job? = null
+
         private var started = false
 
         fun start() {
-            if (started) return
+            if (started) {
+                Log.w(TAG, "Coordinator already started, ignoring start()")
+                return
+            }
+
             started = true
+            Log.i(TAG, "Starting coordinator")
 
             observeConnection()
             observeHeartbeat()
+
+            heartbeatCoordinator.start()
             connectIfNeeded()
         }
 
         fun stop() {
-            connectionJob?.cancel()
+            if (!started) {
+                Log.w(TAG, "Coordinator already stopped, ignoring stop()")
+                return
+            }
+
+            Log.i(TAG, "Stopping coordinator (cleaning up connection)")
+            started = false
+
+            cancelObservers()
             heartbeatCoordinator.stop()
             webSocketClient.disconnect()
-            started = false
+
+            updateState {
+                copy(
+                    connectionState = ConnectionState.Disconnected,
+                    communicationStatus = CommunicationStatusState.Idle,
+                    heartbeatCountdown = 30,
+                )
+            }
         }
 
         private fun observeConnection() {
-            if (connectionJob != null) return
+            if (connectionJob?.isActive == true) return
 
             connectionJob =
                 scope.launch {
                     webSocketClient.connectionState.collect { state ->
-                        Log.d(TAG, "Connection state: $state")
-
-                        updateState { copy(connectionState = state) }
+                        if (!started) return@collect
+                        Log.d(TAG, "Connection event: $state")
 
                         when (state) {
                             is ConnectionState.Connected -> {
+                                updateState { copy(connectionState = state) }
+                                cancelReconnect()
                                 heartbeatCoordinator.start()
                             }
 
                             is ConnectionState.Disconnected -> {
                                 heartbeatCoordinator.stop()
-                                updateCommunicationStatus(CommunicationStatusState.Idle)
-                                reconnect()
+                                updateState {
+                                    copy(
+                                        connectionState = state,
+                                        communicationStatus = CommunicationStatusState.Idle,
+                                    )
+                                }
+
+                                if (started) {
+                                    Log.d(TAG, "Unexpected disconnect, reconnecting...")
+                                    connectIfNeeded()
+                                }
+                                scheduleReconnect()
                             }
 
                             is ConnectionState.Error -> {
                                 heartbeatCoordinator.stop()
+                                val message = state.message?.takeIf { it.isNotBlank() } ?: "WebSocket error"
 
-                                val msg =
-                                    state.message?.takeIf { it.isNotBlank() }
-                                        ?: "WebSocket error"
+                                updateState {
+                                    copy(
+                                        connectionState = state,
+                                        communicationStatus = CommunicationStatusState.Error(message),
+                                    )
+                                }
 
-                                updateCommunicationStatus(
-                                    CommunicationStatusState.Error(msg),
-                                )
-
-                                reconnect()
+                                if (started) connectIfNeeded()
+                                scheduleReconnect()
                             }
 
-                            else -> Unit
+                            is ConnectionState.Connecting -> {
+                                updateState { copy(connectionState = state) }
+                            }
                         }
                     }
                 }
         }
 
         private fun observeHeartbeat() {
-            scope.launch {
-                heartbeatCoordinator.communicationStatus.collect {
-                    updateCommunicationStatus(it)
-                }
+            if (communicationStatusJob?.isActive != true) {
+                communicationStatusJob =
+                    scope.launch {
+                        heartbeatCoordinator.communicationStatus.collect { status ->
+                            if (!started) return@collect
+                            updateState { copy(communicationStatus = status) }
+                        }
+                    }
             }
 
-            scope.launch {
-                heartbeatCoordinator.countdown.collect { seconds ->
-                    updateState { copy(heartbeatCountdown = seconds) }
-                }
+            if (countdownJob?.isActive != true) {
+                countdownJob =
+                    scope.launch {
+                        heartbeatCoordinator.countdown.collect { seconds ->
+                            if (!started) return@collect
+                            updateState { copy(heartbeatCountdown = seconds) }
+                        }
+                    }
             }
         }
 
         private fun connectIfNeeded() {
-            when (uiState.value.connectionState) {
+            if (!started) return
+
+            when (webSocketClient.connectionState.value) {
                 is ConnectionState.Connected,
                 is ConnectionState.Connecting,
                 -> return
+                else -> webSocketClient.connect()
+            }
+        }
 
-                else -> {
-                    Log.d(TAG, "Connecting websocket...")
-                    webSocketClient.connect()
+        private fun scheduleReconnect() {
+            if (!started || reconnectJob?.isActive == true) return
+
+            reconnectJob =
+                scope.launch {
+                    delay(RECONNECT_DELAY)
+                    if (started) connectIfNeeded()
                 }
-            }
         }
 
-        private fun reconnect() {
-            scope.launch {
-                delay(RECONNECT_DELAY)
-                connectIfNeeded()
-            }
+        private fun cancelReconnect() {
+            reconnectJob?.cancel()
+            reconnectJob = null
         }
 
-        private fun updateCommunicationStatus(status: CommunicationStatusState) {
-            Log.d(TAG, "Status: $status")
-            updateState { copy(communicationStatus = status) }
+        private fun cancelObservers() {
+            connectionJob?.cancel()
+            communicationStatusJob?.cancel()
+            countdownJob?.cancel()
+            connectionJob = null
+            communicationStatusJob = null
+            countdownJob = null
+            cancelReconnect()
         }
 
         private fun updateState(block: UsersUiState.() -> UsersUiState) {
-            _uiState.value = _uiState.value.block()
+            _uiState.update { currentState -> currentState.block() }
         }
 
         companion object {
