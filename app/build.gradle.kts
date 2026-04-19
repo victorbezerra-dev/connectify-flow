@@ -111,4 +111,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.leakcanary.android)
 }
