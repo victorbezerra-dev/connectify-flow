@@ -23,7 +23,6 @@ class HeartbeatCoordinator
         private val webSocketClient: WebSocketClient,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
         private val communicationStatusState =
             MutableStateFlow<CommunicationStatusState>(CommunicationStatusState.Idle)
         val communicationStatus = communicationStatusState.asStateFlow()
@@ -33,6 +32,9 @@ class HeartbeatCoordinator
 
         private var job: Job? = null
         private var messagesJob: Job? = null
+
+        private var cycleJob: Job? = null
+
         private var pendingResponse: CompletableDeferred<String>? = null
 
         fun start() {
@@ -45,12 +47,15 @@ class HeartbeatCoordinator
                     Log.d(TAG, "Heartbeat started")
 
                     while (isActive) {
-                        // Start communication cycle in a separate job so it doesn't block the countdown
                         if (webSocketClient.connectionState.value is ConnectionState.Connected) {
-                            launch { runCycle() }
+                            if (cycleJob?.isActive != true) {
+                                cycleJob =
+                                    launch {
+                                        runCycle()
+                                    }
+                            }
                         }
 
-                        // Countdown starts immediately
                         for (i in 30 downTo 1) {
                             countdownState.value = i
                             delay(1000)
