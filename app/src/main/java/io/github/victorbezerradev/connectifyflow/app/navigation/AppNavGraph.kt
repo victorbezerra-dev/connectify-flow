@@ -1,5 +1,6 @@
 package io.github.victorbezerradev.connectifyflow.app.navigation
 
+import UserWebViewScreen
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -55,6 +56,21 @@ fun AppNavGraph(navController: NavHostController) {
 
             UserProfileScreen(user = user, onAction = viewModel::onAction)
         }
+
+        composable(
+            route = Routes.UserWebView.route + "/{url}",
+            arguments = listOf(navArgument("url") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val url =
+                URLDecoder.decode(
+                    backStackEntry.arguments?.getString("url") ?: "",
+                    StandardCharsets.UTF_8.toString(),
+                )
+            UserWebViewScreen(
+                url = url,
+                onBackClick = { navController.popBackStack() },
+            )
+        }
     }
 }
 
@@ -68,13 +84,7 @@ private fun HandleUsersListEffects(
         viewModel.uiEffect.collectLatest { effect ->
             when (effect) {
                 is UsersUiEffect.NavigateToProfile -> navigateToProfile(navController, effect.user)
-                is UsersUiEffect.OpenWebPage ->
-                    launchIntent(
-                        context = context,
-                        intent = Intent(Intent.ACTION_VIEW, effect.url.toUri()),
-                        viewModel = viewModel,
-                        errorType = "website",
-                    )
+                is UsersUiEffect.OpenWebPage -> navigateToWebView(navController, effect.url)
                 is UsersUiEffect.ShowSnackbar -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -137,6 +147,14 @@ private fun navigateToProfile(
     val userJson = Json.encodeToString(user)
     val encodedJson = URLEncoder.encode(userJson, StandardCharsets.UTF_8.toString())
     navController.navigate(Routes.UserProfile.route + "/$encodedJson")
+}
+
+private fun navigateToWebView(
+    navController: NavHostController,
+    url: String,
+) {
+    val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
+    navController.navigate(Routes.UserWebView.route + "/$encodedUrl")
 }
 
 private fun decodeUser(encodedJson: String?): User {

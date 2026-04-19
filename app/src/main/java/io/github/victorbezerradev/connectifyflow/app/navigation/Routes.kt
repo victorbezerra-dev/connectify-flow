@@ -7,5 +7,7 @@ sealed class Routes(val route: String) {
         fun createRoute(userId: String) = "user_profile/$userId"
     }
 
-    data object UserWebView : Routes("user_webview")
+    data object UserWebView : Routes("user_webview") {
+        fun createRoute(url: String) = "user_webview/$url"
+    }
 }
