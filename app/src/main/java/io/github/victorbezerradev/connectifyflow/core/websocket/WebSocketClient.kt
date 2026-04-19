@@ -7,6 +7,8 @@ interface WebSocketClient {
     val messages: Flow<String>
     val connectionState: StateFlow<ConnectionState>
 
+    fun connect()
+
     fun send(message: String): Boolean
 
     fun disconnect()

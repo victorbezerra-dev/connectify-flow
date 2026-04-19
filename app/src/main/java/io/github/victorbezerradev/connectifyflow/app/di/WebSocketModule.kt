@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-const val WEB_SOCKET_URL = "wss://ws.postman-echo.com/raw"
+private const val WEB_SOCKET_URL = "wss://ws.postman-echo.com/raw"
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -36,9 +36,10 @@ abstract class WebSocketModule {
         fun provideWebSocketOkHttpClient(): OkHttpClient {
             return OkHttpClient.Builder()
                 .retryOnConnectionFailure(true)
-                .pingInterval(15, TimeUnit.SECONDS)
+                .pingInterval(60, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
-                .connectTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(35, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
                 .build()
         }
 
