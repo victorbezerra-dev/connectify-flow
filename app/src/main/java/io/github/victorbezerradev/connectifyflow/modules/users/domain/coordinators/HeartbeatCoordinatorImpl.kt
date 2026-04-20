@@ -4,6 +4,7 @@ import android.util.Log
 import io.github.victorbezerradev.connectifyflow.app.di.MainImmediateDispatcher
 import io.github.victorbezerradev.connectifyflow.core.websocket.ConnectionState
 import io.github.victorbezerradev.connectifyflow.core.websocket.WebSocketClient
+import io.github.victorbezerradev.connectifyflow.modules.users.domain.interfaces.HeartbeatCoordinator
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,20 +19,20 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-class HeartbeatCoordinator
+class HeartbeatCoordinatorImpl
     @Inject
     constructor(
         private val webSocketClient: WebSocketClient,
         @param:MainImmediateDispatcher private val dispatcher: CoroutineDispatcher,
-    ) {
+    ) : HeartbeatCoordinator {
         private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
         private val communicationStatusState =
             MutableStateFlow<CommunicationStatusState>(CommunicationStatusState.Idle)
-        val communicationStatus = communicationStatusState.asStateFlow()
+        override val communicationStatus = communicationStatusState.asStateFlow()
 
         private val countdownState = MutableStateFlow(30)
-        val countdown = countdownState.asStateFlow()
+        override val countdown = countdownState.asStateFlow()
 
         private var job: Job? = null
         private var messagesJob: Job? = null
@@ -40,7 +41,7 @@ class HeartbeatCoordinator
 
         private var pendingResponse: CompletableDeferred<String>? = null
 
-        fun start() {
+        override fun start() {
             if (job?.isActive == true) return
 
             observeMessages()
@@ -67,7 +68,7 @@ class HeartbeatCoordinator
                 }
         }
 
-        fun stop() {
+        override fun stop() {
             job?.cancel()
             job = null
 

@@ -41,7 +41,7 @@ class HeartbeatCoordinatorTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
 
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = dispatcher,
                 )
@@ -94,7 +94,7 @@ class HeartbeatCoordinatorTest {
             coEvery { webSocketClient.send("hello") } returns false
 
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = StandardTestDispatcher(testScheduler),
                 )
@@ -125,7 +125,7 @@ class HeartbeatCoordinatorTest {
     fun `countdown should decrease every second after start`() =
         runTest {
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = StandardTestDispatcher(testScheduler),
                 )
@@ -157,7 +157,7 @@ class HeartbeatCoordinatorTest {
     fun `stop should reset communication status and countdown`() =
         runTest {
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = StandardTestDispatcher(testScheduler),
                 )
@@ -181,7 +181,7 @@ class HeartbeatCoordinatorTest {
     fun `start should do nothing when websocket is disconnected`() =
         runTest {
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = StandardTestDispatcher(testScheduler),
                 )
@@ -204,7 +204,7 @@ class HeartbeatCoordinatorTest {
     fun `start should not create duplicated heartbeat loop when called twice`() =
         runTest {
             val coordinator =
-                HeartbeatCoordinator(
+                HeartbeatCoordinatorImpl(
                     webSocketClient = webSocketClient,
                     dispatcher = StandardTestDispatcher(testScheduler),
                 )
