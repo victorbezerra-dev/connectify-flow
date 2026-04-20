@@ -3,6 +3,7 @@ package io.github.victorbezerradev.connectifyflow.modules.users.domain.coordinat
 import android.util.Log
 import io.github.victorbezerradev.connectifyflow.core.websocket.ConnectionState
 import io.github.victorbezerradev.connectifyflow.core.websocket.WebSocketClient
+import io.github.victorbezerradev.connectifyflow.modules.users.domain.interfaces.HeartbeatCoordinator
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.UsersUiState
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,24 +37,45 @@ class UsersConnectionCoordinator
 
         private var started = false
         private var reconnectionAttempts = 0
+        private var hasObservedInitialConnectionState = false
+        private var lastConnectionState: ConnectionState? = null
 
         fun start() {
             if (started) {
-                Log.i(TAG, "Coordinator already started, resetting attempts and forcing manual reconnection")
+                Log.i(TAG, "Coordinator already started, forcing reconnect")
                 reconnectionAttempts = 0
-                updateState { copy(connectionState = ConnectionState.Connecting) }
+                cancelReconnect()
+
+                updateState {
+                    copy(
+                        connectionState = ConnectionState.Connecting,
+                        communicationStatus = CommunicationStatusState.Idle,
+                    )
+                }
+
                 webSocketClient.connect()
                 return
             }
 
             started = true
+            reconnectionAttempts = 0
+            hasObservedInitialConnectionState = false
+            lastConnectionState = null
+
             Log.i(TAG, "Starting coordinator")
 
             observeConnection()
             observeHeartbeat()
-
             heartbeatCoordinator.start()
-            connectIfNeeded()
+
+            updateState {
+                copy(
+                    connectionState = ConnectionState.Connecting,
+                    communicationStatus = CommunicationStatusState.Idle,
+                )
+            }
+
+            webSocketClient.connect()
         }
 
         fun stop() {
@@ -61,12 +84,18 @@ class UsersConnectionCoordinator
                 return
             }
 
-            Log.i(TAG, "Stopping coordinator (cleaning up connection)")
+            Log.i(TAG, "Stopping coordinator")
             started = false
 
+            cancelReconnect()
             cancelObservers()
+
             heartbeatCoordinator.stop()
             webSocketClient.disconnect()
+
+            reconnectionAttempts = 0
+            hasObservedInitialConnectionState = false
+            lastConnectionState = null
 
             updateState {
                 copy(
@@ -77,6 +106,24 @@ class UsersConnectionCoordinator
             }
         }
 
+        fun retryConnection() {
+            if (!started) return
+
+            Log.i(TAG, "Manual retry requested by user")
+            reconnectionAttempts = 0
+            cancelReconnect()
+            heartbeatCoordinator.stop()
+
+            updateState {
+                copy(
+                    connectionState = ConnectionState.Connecting,
+                    communicationStatus = CommunicationStatusState.Idle,
+                )
+            }
+
+            webSocketClient.connect()
+        }
+
         private fun observeConnection() {
             if (connectionJob?.isActive == true) return
 
@@ -84,62 +131,119 @@ class UsersConnectionCoordinator
                 scope.launch {
                     webSocketClient.connectionState.collect { state ->
                         if (!started) return@collect
+                        if (shouldIgnoreInitialEmission(state)) return@collect
+
                         Log.d(TAG, "Connection event: $state")
-
-                        when (state) {
-                            is ConnectionState.Connected -> {
-                                updateState { copy(connectionState = state) }
-                                reconnectionAttempts = 0
-                                cancelReconnect()
-                                heartbeatCoordinator.start()
-                            }
-
-                            is ConnectionState.Disconnected -> {
-                                heartbeatCoordinator.stop()
-                                updateState {
-                                    copy(
-                                        connectionState = state,
-                                        communicationStatus = CommunicationStatusState.Idle,
-                                    )
-                                }
-
-                                if (started) {
-                                    Log.d(TAG, "Unexpected disconnect, reconnecting...")
-                                    connectIfNeeded()
-                                }
-                                scheduleReconnect()
-                            }
-
-                            is ConnectionState.Error -> {
-                                heartbeatCoordinator.stop()
-                                val technicalMessage = state.message ?: ""
-                                val friendlyMessage =
-                                    when {
-                                        technicalMessage.contains("Unable to resolve host", ignoreCase = true) ->
-                                            "No internet connection."
-                                        technicalMessage.contains("Failed to connect", ignoreCase = true) ||
-                                            technicalMessage.contains("Connection refused", ignoreCase = true) ->
-                                            "Server is unreachable."
-                                        else -> "Connection failed. Please try again."
-                                    }
-
-                                updateState {
-                                    copy(
-                                        connectionState = state,
-                                        communicationStatus = CommunicationStatusState.Error(friendlyMessage),
-                                    )
-                                }
-
-                                if (started) connectIfNeeded()
-                                scheduleReconnect()
-                            }
-
-                            is ConnectionState.Connecting -> {
-                                updateState { copy(connectionState = state) }
-                            }
-                        }
+                        handleConnectionState(state)
+                        lastConnectionState = state
                     }
                 }
+        }
+
+        private fun shouldIgnoreInitialEmission(state: ConnectionState): Boolean {
+            if (hasObservedInitialConnectionState) return false
+
+            hasObservedInitialConnectionState = true
+            lastConnectionState = state
+
+            Log.d(TAG, "Ignoring initial connection state emission: $state")
+
+            if (state is ConnectionState.Connected) {
+                updateState { copy(connectionState = state) }
+            }
+
+            return true
+        }
+
+        private fun handleConnectionState(state: ConnectionState) {
+            when (state) {
+                is ConnectionState.Connected -> handleConnected()
+                is ConnectionState.Connecting -> handleConnecting()
+                is ConnectionState.Disconnected -> handleDisconnected()
+                is ConnectionState.Error -> handleError(state)
+            }
+        }
+
+        private fun handleConnected() {
+            reconnectionAttempts = 0
+            cancelReconnect()
+
+            updateState {
+                copy(
+                    connectionState = ConnectionState.Connected,
+                    communicationStatus = CommunicationStatusState.Idle,
+                )
+            }
+
+            val wasNotConnectedBefore = lastConnectionState !is ConnectionState.Connected
+            if (wasNotConnectedBefore) {
+                heartbeatCoordinator.start()
+            }
+        }
+
+        private fun handleConnecting() {
+            updateState {
+                copy(connectionState = ConnectionState.Connecting)
+            }
+        }
+
+        private fun handleDisconnected() {
+            heartbeatCoordinator.stop()
+
+            updateState {
+                copy(communicationStatus = CommunicationStatusState.Idle)
+            }
+
+            if (canReconnect()) {
+                updateState {
+                    copy(connectionState = ConnectionState.Connecting)
+                }
+                scheduleReconnect()
+            } else {
+                Log.w(TAG, "Reconnect limit reached. Waiting for manual retry.")
+                updateState {
+                    copy(connectionState = ConnectionState.Disconnected)
+                }
+            }
+        }
+
+        private fun handleError(state: ConnectionState.Error) {
+            heartbeatCoordinator.stop()
+
+            val friendlyMessage = mapFriendlyErrorMessage(state.message)
+
+            if (canReconnect()) {
+                updateState {
+                    copy(
+                        connectionState = ConnectionState.Connecting,
+                        communicationStatus = CommunicationStatusState.Error(friendlyMessage),
+                    )
+                }
+                scheduleReconnect()
+            } else {
+                Log.w(TAG, "Reconnect limit reached after error. Waiting for manual retry.")
+                updateState {
+                    copy(
+                        connectionState = ConnectionState.Disconnected,
+                        communicationStatus = CommunicationStatusState.Error(friendlyMessage),
+                    )
+                }
+            }
+        }
+
+        private fun canReconnect(): Boolean = reconnectionAttempts < MAX_RECONNECT_ATTEMPTS
+
+        private fun mapFriendlyErrorMessage(message: String?): String {
+            val technicalMessage = message.orEmpty()
+
+            return when {
+                technicalMessage.contains("Unable to resolve host", ignoreCase = true) ->
+                    "No internet connection."
+                technicalMessage.contains("Failed to connect", ignoreCase = true) ||
+                    technicalMessage.contains("Connection refused", ignoreCase = true) ->
+                    "Server is unreachable."
+                else -> "Connection failed. Please try again."
+            }
         }
 
         private fun observeHeartbeat() {
@@ -164,30 +268,33 @@ class UsersConnectionCoordinator
             }
         }
 
-        private fun connectIfNeeded() {
-            if (!started) return
-
-            when (webSocketClient.connectionState.value) {
-                is ConnectionState.Connected,
-                is ConnectionState.Connecting,
-                -> return
-                else -> webSocketClient.connect()
-            }
-        }
-
         private fun scheduleReconnect() {
-            if (!started || reconnectJob?.isActive == true) return
-            if (reconnectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                Log.w(TAG, "Max reconnection attempts reached ($MAX_RECONNECT_ATTEMPTS). Stopping auto-retry.")
-                return
-            }
+            val shouldSchedule =
+                started &&
+                    reconnectJob?.isActive != true &&
+                    reconnectionAttempts < MAX_RECONNECT_ATTEMPTS
+
+            if (!shouldSchedule) return
 
             reconnectJob =
                 scope.launch {
                     reconnectionAttempts++
-                    Log.d(TAG, "Scheduling reconnection attempt #$reconnectionAttempts in ${RECONNECT_DELAY}ms")
+
+                    Log.d(
+                        TAG,
+                        "Scheduling reconnect attempt #$reconnectionAttempts in ${RECONNECT_DELAY}ms",
+                    )
+
                     delay(RECONNECT_DELAY)
-                    if (started) connectIfNeeded()
+
+                    if (started) {
+                        updateState {
+                            copy(connectionState = ConnectionState.Connecting)
+                        }
+                        webSocketClient.connect()
+                    }
+
+                    reconnectJob = null
                 }
         }
 
@@ -200,14 +307,14 @@ class UsersConnectionCoordinator
             connectionJob?.cancel()
             communicationStatusJob?.cancel()
             countdownJob?.cancel()
+
             connectionJob = null
             communicationStatusJob = null
             countdownJob = null
-            cancelReconnect()
         }
 
         private fun updateState(block: UsersUiState.() -> UsersUiState) {
-            _uiState.update { currentState -> currentState.block() }
+            _uiState.update { current -> current.block() }
         }
 
         companion object {
