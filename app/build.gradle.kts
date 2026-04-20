@@ -110,6 +110,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.truth)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.leakcanary.android)
 }
