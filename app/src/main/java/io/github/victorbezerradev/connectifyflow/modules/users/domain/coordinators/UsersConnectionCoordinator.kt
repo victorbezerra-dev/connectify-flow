@@ -34,10 +34,14 @@ class UsersConnectionCoordinator
         private var reconnectJob: Job? = null
 
         private var started = false
+        private var reconnectionAttempts = 0
 
         fun start() {
             if (started) {
-                Log.w(TAG, "Coordinator already started, ignoring start()")
+                Log.i(TAG, "Coordinator already started, resetting attempts and forcing manual reconnection")
+                reconnectionAttempts = 0
+                updateState { copy(connectionState = ConnectionState.Connecting) }
+                webSocketClient.connect()
                 return
             }
 
@@ -85,6 +89,7 @@ class UsersConnectionCoordinator
                         when (state) {
                             is ConnectionState.Connected -> {
                                 updateState { copy(connectionState = state) }
+                                reconnectionAttempts = 0
                                 cancelReconnect()
                                 heartbeatCoordinator.start()
                             }
@@ -107,12 +112,21 @@ class UsersConnectionCoordinator
 
                             is ConnectionState.Error -> {
                                 heartbeatCoordinator.stop()
-                                val message = state.message?.takeIf { it.isNotBlank() } ?: "WebSocket error"
+                                val technicalMessage = state.message ?: ""
+                                val friendlyMessage =
+                                    when {
+                                        technicalMessage.contains("Unable to resolve host", ignoreCase = true) ->
+                                            "No internet connection."
+                                        technicalMessage.contains("Failed to connect", ignoreCase = true) ||
+                                            technicalMessage.contains("Connection refused", ignoreCase = true) ->
+                                            "Server is unreachable."
+                                        else -> "Connection failed. Please try again."
+                                    }
 
                                 updateState {
                                     copy(
                                         connectionState = state,
-                                        communicationStatus = CommunicationStatusState.Error(message),
+                                        communicationStatus = CommunicationStatusState.Error(friendlyMessage),
                                     )
                                 }
 
@@ -163,9 +177,15 @@ class UsersConnectionCoordinator
 
         private fun scheduleReconnect() {
             if (!started || reconnectJob?.isActive == true) return
+            if (reconnectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                Log.w(TAG, "Max reconnection attempts reached ($MAX_RECONNECT_ATTEMPTS). Stopping auto-retry.")
+                return
+            }
 
             reconnectJob =
                 scope.launch {
+                    reconnectionAttempts++
+                    Log.d(TAG, "Scheduling reconnection attempt #$reconnectionAttempts in ${RECONNECT_DELAY}ms")
                     delay(RECONNECT_DELAY)
                     if (started) connectIfNeeded()
                 }
@@ -193,5 +213,6 @@ class UsersConnectionCoordinator
         companion object {
             private const val TAG = "UsersCoordinator"
             private const val RECONNECT_DELAY = 3000L
+            private const val MAX_RECONNECT_ATTEMPTS = 3
         }
     }

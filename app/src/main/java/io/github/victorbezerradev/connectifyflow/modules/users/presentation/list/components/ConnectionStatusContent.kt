@@ -5,15 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,9 +37,12 @@ fun ConnectionStatusContent(
     status: ConnectionState,
     modifier: Modifier = Modifier,
     communicationStatus: CommunicationStatusState = CommunicationStatusState.Idle,
+    onRetry: () -> Unit = {},
 ) {
     val statusUi = status.toConnectionStatusUi()
     val communicationText = communicationStatus.toCommunicationText()
+    val isConnecting = status is ConnectionState.Connecting
+    val showRetryButton = status is ConnectionState.Error || status is ConnectionState.Disconnected || isConnecting
 
     Card(
         modifier = modifier,
@@ -53,6 +61,55 @@ fun ConnectionStatusContent(
             ConnectionStatusRow(
                 statusUi = statusUi,
                 communicationText = communicationText,
+            )
+
+            if (showRetryButton) {
+                Spacer(modifier = Modifier.height(16.dp))
+                RetryButton(
+                    onRetry = onRetry,
+                    isLoading = isConnecting,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RetryButton(
+    onRetry: () -> Unit,
+    isLoading: Boolean,
+) {
+    Button(
+        onClick = onRetry,
+        enabled = !isLoading,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Text(
+                text = if (isLoading) "Connecting..." else "Retry connection",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
             )
         }
     }

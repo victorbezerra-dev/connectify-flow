@@ -34,25 +34,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.victorbezerradev.connectifyflow.core.websocket.ConnectionState
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
+import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.ExpandableConnectionCardUiState
 
 @Composable
 fun ExpandableConnectionCard(
+    uiState: ExpandableConnectionCardUiState,
     modifier: Modifier = Modifier,
-    title: String = "Animation",
-    status: ConnectionState = ConnectionState.Connected,
-    communicationStatus: CommunicationStatusState = CommunicationStatusState.Idle,
-    heartbeatCountdown: Int = 30,
+    onRetry: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(true) }
     val arrowRotation by rememberArrowRotation(expanded = expanded)
 
     val headerUiState =
         ExpandableConnectionHeaderUiState(
-            title = title,
-            status = status,
+            title = uiState.title,
+            status = uiState.status,
             expanded = expanded,
             arrowRotation = arrowRotation,
-            heartbeatCountdown = heartbeatCountdown,
+            heartbeatCountdown = uiState.heartbeatCountdown,
         )
 
     Card(
@@ -81,8 +80,9 @@ fun ExpandableConnectionCard(
 
             ExpandableConnectionContent(
                 expanded = expanded,
-                status = status,
-                communicationStatus = communicationStatus,
+                status = uiState.status,
+                communicationStatus = uiState.communicationStatus,
+                onRetry = onRetry,
             )
         }
     }
@@ -185,6 +185,7 @@ private fun ExpandableConnectionContent(
     expanded: Boolean,
     status: ConnectionState,
     communicationStatus: CommunicationStatusState,
+    onRetry: () -> Unit,
 ) {
     AnimatedVisibility(visible = expanded) {
         Column(
@@ -204,6 +205,7 @@ private fun ExpandableConnectionContent(
                 status = status,
                 communicationStatus = communicationStatus,
                 modifier = Modifier.fillMaxWidth(),
+                onRetry = onRetry,
             )
         }
     }

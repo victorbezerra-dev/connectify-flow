@@ -18,4 +18,6 @@ sealed interface UsersUiAction {
     data class CallClicked(val phone: String) : UsersUiAction
 
     data class ShowError(val message: String) : UsersUiAction
+
+    data object RetryConnection : UsersUiAction
 }

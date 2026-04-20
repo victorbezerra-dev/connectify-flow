@@ -82,6 +82,10 @@ class UsersListViewModel
                 is UsersUiAction.ShowError -> {
                     emitEffect(UsersUiEffect.ShowSnackbar(action.message))
                 }
+
+                is UsersUiAction.RetryConnection -> {
+                    coordinator.start()
+                }
             }
         }
 

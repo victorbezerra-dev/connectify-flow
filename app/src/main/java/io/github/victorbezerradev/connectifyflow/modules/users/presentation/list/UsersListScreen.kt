@@ -35,6 +35,7 @@ import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.components.ExpandableConnectionCard
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.components.UserCard
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
+import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.ExpandableConnectionCardUiState
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.UsersUiState
 
 @Composable
@@ -69,14 +70,18 @@ fun UsersListContent(
         modifier = modifier.fillMaxSize(),
         topBar = {
             ExpandableConnectionCard(
+                uiState =
+                    ExpandableConnectionCardUiState(
+                        title = "Monitor",
+                        status = uiState.connectionState,
+                        communicationStatus = uiState.communicationStatus,
+                        heartbeatCountdown = uiState.heartbeatCountdown,
+                    ),
                 modifier =
                     Modifier
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .padding(horizontal = 16.dp, vertical = 16.dp),
-                title = "Monitor",
-                status = uiState.connectionState,
-                communicationStatus = uiState.communicationStatus,
-                heartbeatCountdown = uiState.heartbeatCountdown,
+                onRetry = { onAction(UsersUiAction.RetryConnection) },
             )
         },
     ) { paddingValues ->
