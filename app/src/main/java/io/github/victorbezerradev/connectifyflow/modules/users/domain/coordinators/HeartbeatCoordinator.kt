@@ -1,12 +1,13 @@
 package io.github.victorbezerradev.connectifyflow.modules.users.domain.coordinators
 
 import android.util.Log
+import io.github.victorbezerradev.connectifyflow.app.di.MainImmediateDispatcher
 import io.github.victorbezerradev.connectifyflow.core.websocket.ConnectionState
 import io.github.victorbezerradev.connectifyflow.core.websocket.WebSocketClient
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.CommunicationStatusState
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -21,8 +22,10 @@ class HeartbeatCoordinator
     @Inject
     constructor(
         private val webSocketClient: WebSocketClient,
+        @param:MainImmediateDispatcher private val dispatcher: CoroutineDispatcher,
     ) {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+
         private val communicationStatusState =
             MutableStateFlow<CommunicationStatusState>(CommunicationStatusState.Idle)
         val communicationStatus = communicationStatusState.asStateFlow()
