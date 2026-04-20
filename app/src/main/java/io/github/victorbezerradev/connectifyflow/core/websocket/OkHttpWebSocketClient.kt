@@ -37,21 +37,23 @@ class OkHttpWebSocketClient
         private var webSocket: WebSocket? = null
 
         override fun connect() {
-            val isAlreadyConnectedOrConnecting =
-                webSocket != null ||
-                    _connectionState.value is ConnectionState.Connecting ||
-                    _connectionState.value is ConnectionState.Connected
+            val currentState = _connectionState.value
 
-            if (!isAlreadyConnectedOrConnecting) {
-                _connectionState.value = ConnectionState.Connecting
-
-                val request =
-                    Request.Builder()
-                        .url(webSocketUrl)
-                        .build()
-
-                webSocket = okHttpClient.newWebSocket(request, createListener())
+            if (currentState is ConnectionState.Connected && webSocket != null) {
+                return
             }
+
+            webSocket?.cancel()
+            webSocket = null
+
+            _connectionState.value = ConnectionState.Connecting
+
+            val request =
+                Request.Builder()
+                    .url(webSocketUrl)
+                    .build()
+
+            webSocket = okHttpClient.newWebSocket(request, createListener())
         }
 
         override fun send(message: String): Boolean {
