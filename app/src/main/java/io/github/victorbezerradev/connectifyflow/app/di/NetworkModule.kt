@@ -6,7 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import io.github.victorbezerradev.connectifyflow.modules.users.domain.repositories.UsersRepository
+import io.github.victorbezerradev.connectifyflow.modules.users.domain.interfaces.UsersRepository
 import io.github.victorbezerradev.connectifyflow.modules.users.infra.UsersRepositoryImpl
 import io.github.victorbezerradev.connectifyflow.modules.users.infra.apis.UsersApi
 import kotlinx.serialization.json.Json

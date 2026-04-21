@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.coordinators.UsersConnectionCoordinator
+import io.github.victorbezerradev.connectifyflow.modules.users.domain.interfaces.UsersRepository
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.models.User
-import io.github.victorbezerradev.connectifyflow.modules.users.domain.repositories.UsersRepository
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.actions.UsersUiAction
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.effects.UsersUiEffect
 import io.github.victorbezerradev.connectifyflow.modules.users.presentation.list.states.UsersUiState

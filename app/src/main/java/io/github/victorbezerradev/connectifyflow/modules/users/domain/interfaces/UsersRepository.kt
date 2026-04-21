@@ -1,4 +1,4 @@
-package io.github.victorbezerradev.connectifyflow.modules.users.domain.repositories
+package io.github.victorbezerradev.connectifyflow.modules.users.domain.interfaces
 
 import io.github.victorbezerradev.connectifyflow.modules.users.domain.models.User
 
