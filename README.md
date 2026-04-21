@@ -150,8 +150,7 @@ To maintain a high-quality codebase, we use a multi-layered verification strateg
 
 You can test the latest stable version by downloading the APK from our releases:
 
-- [📦 Download Connectify Flow v1.0.0](https://github.com/victorbezerra-dev/connectify-flow/releases/tag/v1.0.0)
-
+- [📦 Download Connectify Flow v1.0.0](https://github.com/victorbezerra-dev/cine-hub/releases/tag/untagged-98b2fad051acb865b2b5)
 > [!NOTE]  
 > Make sure to enable "Install from unknown sources" on your Android device settings.
 
