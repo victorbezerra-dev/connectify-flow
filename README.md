@@ -72,13 +72,11 @@ This approach ensures:
 
 ## 📦 Download APK
 
-You can download and install the latest APK version of the application below:
+You can download the latest published APK from the release below:
 
-> ⚠️ This build is intended for testing purposes (debug/release preview)
+- [Download APK - v1.0.0](https://github.com/victorbezerra-dev/connectify-flow/releases/tag/v1.0.0)
 
-### 📥 APK
-
-- [Download APK](./app-release.apk)
+> ⚠️ Make sure to download the APK asset attached to the GitHub release page.
 
 ### 📱 Installation Instructions
 
